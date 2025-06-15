@@ -2,6 +2,7 @@ from django.db.models import F
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 from django.views import generic
 
 from .models import Question, Choice
@@ -12,17 +13,34 @@ class IndexView(generic.ListView):
     context_object_name = 'latest_question_list'
 
     def get_queryset(self):
-        return [q for q in Question.objects.order_by('-pub_date')[:5] if q.choice_set.all()]
+        now = timezone.now()
+        return [q for q in Question.objects.filter(pub_date__lte=now).order_by('-pub_date')[:5] if q.choice_set.all()]
 
 
 class DetailView(generic.DetailView):
     model = Question
     template_name = "polls/detail.html"
 
+    def get_queryset(self):
+        """
+        Excludes any questions that aren't published yet.
+        """
+        now = timezone.now()
+        q = Question.objects.filter(pub_date__lte=now, choice__isnull=False)
+        return q
+
 
 class ResultsView(generic.DetailView):
     model = Question
     template_name = "polls/results.html"
+
+    def get_queryset(self):
+        """
+        Excludes any questions that aren't published yet.
+        """
+        now = timezone.now()
+        q = Question.objects.filter(pub_date__lte=now, choice__isnull=False)
+        return q
 
 
 def vote(request, question_id):
