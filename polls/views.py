@@ -1,5 +1,5 @@
 from django.db.models import F
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
@@ -21,26 +21,36 @@ class DetailView(generic.DetailView):
     model = Question
     template_name = "polls/detail.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not self.object.choice_set.exists():
+            raise Http404("No choices for this question.")
+        return context
+
     def get_queryset(self):
         """
         Excludes any questions that aren't published yet.
         """
         now = timezone.now()
-        q = Question.objects.filter(pub_date__lte=now, choice__isnull=False)
-        return q
+        return Question.objects.filter(pub_date__lte=now)
 
 
 class ResultsView(generic.DetailView):
     model = Question
     template_name = "polls/results.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not self.object.choice_set.exists():
+            raise Http404("No choices for this question.")
+        return context
+
     def get_queryset(self):
         """
         Excludes any questions that aren't published yet.
         """
         now = timezone.now()
-        q = Question.objects.filter(pub_date__lte=now, choice__isnull=False)
-        return q
+        return Question.objects.filter(pub_date__lte=now)
 
 
 def vote(request, question_id):
